@@ -7,6 +7,9 @@ import hashlib
 import math
 
 
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
+
 class Bilibili(VideoExtractor):
     name = "Bilibili"
 

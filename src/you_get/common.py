@@ -20,7 +20,8 @@ from .util import log, term
 from .util.git import get_version
 from .util.strings import get_filename, unescape_html
 from . import json_output as json_output_
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer,encoding='utf8')
+#sys.stdout = io.TextIOWrapper(sys.stdout.buffer,encoding='utf8')
+from video_memos.vm_progress import VMDownloadingProgress
 
 SITES = {
     '163'              : 'netease',
@@ -820,7 +821,16 @@ def url_save(
                     received += len(buffer)
                     received_chunk += len(buffer)
                     if bar:
+                        # VideoMemos: Stop Downloading.
+                        if not bar.progress_file_exists():
+                            print('[you_get.common.py]: STOP DOWNLOAINDG ...')
+                            break
                         bar.update_received(len(buffer))
+    
+    # VideoMemos: If stopped manually, leave the tmp file there
+    if bar and not bar.progress_file_exists():
+        print('[you_get.common.py]: Stopped Manually, Leave Cached File.')
+        return
 
     assert received == os.path.getsize(temp_filepath), '%s == %s == %s' % (
         received, os.path.getsize(temp_filepath), temp_filepath
@@ -1030,9 +1040,7 @@ def download_urls(
                 log.w('Skipping %s: file already exists' % output_filepath)
             print()
             return
-        bar = SimpleProgressBar(total_size, len(urls))
-    else:
-        bar = PiecesProgressBar(total_size, len(urls))
+    bar = VMDownloadingProgress(output_dir, total_size, len(urls))
 
     if len(urls) == 1:
         url = urls[0]
@@ -1714,6 +1722,9 @@ def script_main(download, download_playlist, **kwargs):
         # to fix extractors not use VideoExtractor
         dry_run = True
         info_only = False
+    else:
+        json_output = False
+        dry_run = False
 
     if args.cookies:
         load_cookies(args.cookies)
